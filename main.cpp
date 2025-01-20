@@ -11,6 +11,7 @@
 
 class Toolbar {
   using strvec = std::vector<std::string>;
+  WINDOW *win;
   strvec leftItems;
   strvec rightItems;
   int xOffset;
@@ -18,15 +19,15 @@ class Toolbar {
   int borderPadding;
 
 public:
-  Toolbar(int _borderPadding, int _xOffset, int _yOffset, strvec _leftItems, strvec _rightItems) {
+  Toolbar(WINDOW *_win, int _borderPadding, int _xOffset, int _yOffset, strvec _leftItems, strvec _rightItems) {
+    this->win = _win;
     this->leftItems = _leftItems;
     this->rightItems = _rightItems;
     this->xOffset = _xOffset;
     this->yOffset = _yOffset;
     this-> borderPadding = _borderPadding;
   }
-  void printToolbar(WINDOW *win, int yMax, int xMax) {
-
+  void printToolbar(int yMax, int xMax) {
     int last_x = borderPadding;
     if (leftItems.size() == 0){
         return;
@@ -66,7 +67,7 @@ void displayDirectory(const std::string filepath) {
 
   initscr();
 
-  Toolbar tb(2, 2, 0, leftItems, rightItems);
+  Toolbar tb(stdscr, 2, 2, 0, leftItems, rightItems);
 
   getmaxyx(stdscr, yMax, xMax);
 
@@ -79,7 +80,7 @@ void displayDirectory(const std::string filepath) {
 
   box(stdscr, 0, 0);
   refresh();
-  tb.printToolbar(stdscr, yMax, xMax);
+  tb.printToolbar(yMax, xMax);
 
   int ch;
   while ((ch = wgetch(stdscr)) != 'q' && ch != 'Q') {
