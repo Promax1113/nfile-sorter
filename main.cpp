@@ -19,29 +19,30 @@ class Toolbar {
   int borderPadding;
 
 public:
-  Toolbar(WINDOW *_win, int _borderPadding, int _xOffset, int _yOffset, strvec _leftItems, strvec _rightItems) {
+  Toolbar(WINDOW *_win, int _borderPadding, int _xOffset, int _yOffset,
+          strvec _leftItems, strvec _rightItems) {
     this->win = _win;
     this->leftItems = _leftItems;
     this->rightItems = _rightItems;
     this->xOffset = _xOffset;
     this->yOffset = _yOffset;
-    this-> borderPadding = _borderPadding;
+    this->borderPadding = _borderPadding;
   }
   void printToolbar(int yMax, int xMax) {
     int last_x = borderPadding;
-    if (leftItems.size() == 0){
-        return;
+    if (leftItems.size() == 0) {
+      return;
     }
     for (const std::string item : leftItems) {
       mvwprintw(win, yOffset, last_x, " %s ", item.c_str());
       last_x += item.length() + xOffset;
     }
     last_x = xMax - borderPadding;
-    if (rightItems.size() == 0){
-        return;
+    if (rightItems.size() == 0) {
+      return;
     }
     for (const std::string item : rightItems) {
-      mvwprintw(win, yOffset, last_x - item.length(), " %s ", item.c_str());
+      mvwprintw(win, yOffset, last_x - item.length() - 1, " %s ", item.c_str());
       last_x -= (item.length() + xOffset);
     }
     wrefresh(win);
@@ -63,7 +64,8 @@ void displayDirectory(const std::string filepath) {
   int yMax, xMax;
 
   std::vector<std::string> leftItems = {"Directory"};
-  std::vector<std::string> rightItems = {"v0.0.1", "ncurses - a file sorter in ncurses"};
+  std::vector<std::string> rightItems = {"v0.0.1",
+                                         "ncurses - a file sorter in ncurses"};
 
   initscr();
 
