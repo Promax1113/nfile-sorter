@@ -6,6 +6,7 @@ namespace pageSystem{
         this->itemsPerPage = itemsPage;
         this->currentPage = curr;
     }
+
     directoryFiles_t PageInfo::getPageItems(const directoryFiles_t& files) {
         int start = currentPage * itemsPerPage;
         /*
