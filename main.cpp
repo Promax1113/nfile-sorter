@@ -13,22 +13,41 @@ class Toolbar {
   using strvec = std::vector<std::string>;
   strvec leftItems;
   strvec rightItems;
+  int xOffset;
+  int yOffset;
+  int borderPadding;
 
 public:
-  Toolbar(strvec _leftItems, strvec _rightItems) {
+  Toolbar(int _borderPadding, int _xOffset, int _yOffset, strvec _leftItems, strvec _rightItems) {
     this->leftItems = _leftItems;
     this->rightItems = _rightItems;
+    this->xOffset = _xOffset;
+    this->yOffset = _yOffset;
+    this-> borderPadding = _borderPadding;
   }
   void printToolbar(WINDOW *win, int yMax, int xMax) {
-    int last_x = 0;
-    for (const std::string item : leftItems) {
-      mvwprintw(win, yMax, last_x + item.length(), "%s", item.c_str());
-      last_x += item.length();
+
+    int last_x = borderPadding;
+    if (leftItems.size() == 0){
+        return;
     }
+    for (const std::string item : leftItems) {
+      mvwprintw(win, yOffset, last_x, "%s", item.c_str());
+      last_x += item.length() + xOffset;
+    }
+    last_x = xMax - borderPadding;
+    if (rightItems.size() == 0){
+        return;
+    }
+    for (const std::string item : rightItems) {
+      mvwprintw(win, yOffset, last_x - item.length(), "%s", item.c_str());
+      last_x -= (item.length() + xOffset);
+    }
+    wrefresh(win);
   }
 };
 
-std::vector<std::string> getDirectoryFilesSorted(std::string filepath) {
+std::vector<std::string> getDirectoryEntriesSorted(std::string filepath) {
   using namespace std;
   vector<string> dirFiles;
   for (const auto &entry : filesystem::directory_iterator(filepath)) {
@@ -42,8 +61,15 @@ void displayDirectory(const std::string filepath) {
   int selectedOption = 0;
   int yMax, xMax;
 
+  std::vector<std::string> leftItems = {"Directory"};
+  std::vector<std::string> rightItems = {"v0.0.1", "nfile"};
+
   initscr();
+
+  Toolbar tb(2, 2, 0, leftItems, rightItems);
+
   getmaxyx(stdscr, yMax, xMax);
+
   std::vector<std::string> dirFiles;
 
   curs_set(0);
@@ -52,8 +78,8 @@ void displayDirectory(const std::string filepath) {
   noecho();
 
   box(stdscr, 0, 0);
-  mvwprintw(stdscr, 0, 2, "Directory");
-  mvwprintw(stdscr, 0, xMax - 14, "nfile-sorter");
+  refresh();
+  tb.printToolbar(stdscr, yMax, xMax);
 
   int ch;
   while ((ch = wgetch(stdscr)) != 'q' && ch != 'Q') {
@@ -63,11 +89,13 @@ void displayDirectory(const std::string filepath) {
 }
 
 int main(int argc, char *argv[]) {
-  std::string filepath;
+  std::string filepath = ".";
 
-  if (argc <= 1) {
-    std::cout << "No arg. defaulting to '.'";
+  if (argc > 1) {
+    filepath = argv[1];
+  } else {
+    std::cout << "No arg. defaulting to '.'\n";
   }
 
-  displayDirectory(argv[1]);
+  displayDirectory(filepath);
 }
