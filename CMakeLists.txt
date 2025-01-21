@@ -7,8 +7,9 @@ set(CMAKE_BUILD_TYPE Debug)
 
 find_package(Curses REQUIRED)
 include_directories(${CURSES_INCLUDE_DIR})
+include_directories(pageSystem/)
 
-add_executable(${PROJECT_NAME} main.cpp)
+add_executable(${PROJECT_NAME} main.cpp pageSystem/pageSystem.cpp)
 target_link_libraries(${PROJECT_NAME} ${CURSES_LIBRARIES})
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g")
