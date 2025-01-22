@@ -32,9 +32,7 @@ public:
   void printToolbar(int yMax, int xMax) {
 
     int last_x = xMax - borderPadding;
-    if (rightItems.size() == 0) {
-      return;
-    }
+
     for (const std::string item : rightItems) {
       mvwprintw(win, yOffset, last_x - item.length() - 2, " %s ", item.c_str());
       last_x -= (item.length() + xOffset);
@@ -42,9 +40,6 @@ public:
     last_x = borderPadding;
 
     wrefresh(win);
-    if (leftItems.size() == 0) {
-      return;
-    }
     for (const std::string item : leftItems) {
       mvwprintw(win, yOffset, last_x, " %s ", item.c_str());
       last_x += item.length() + xOffset;
@@ -55,8 +50,7 @@ public:
 PageSystem::directoryFiles_t getDirectoryEntriesSorted(std::string filepath) {
   PageSystem::directoryFiles_t dirFiles;
   for (const auto &entry : std::filesystem::directory_iterator(filepath)) {
-    if (entry.path().filename().string() != "." ||
-        entry.path().filename().string() != "..")
+    if (std::filesystem::is_directory(entry))
       dirFiles.push_back(
           std::make_pair(entry.path().filename().string(), entry));
   }
@@ -67,14 +61,16 @@ PageSystem::directoryFiles_t getDirectoryEntriesSorted(std::string filepath) {
 void displayDirectory(const std::string filepath) {
   int selectedOption = 0;
   int yMax, xMax;
-
-  std::vector<std::string> leftItems = {"Directory"};
-  std::vector<std::string> rightItems = {"v0.0.1",
-                                         "ncurses - a file sorter in ncurses"};
+  std::filesystem::current_path(filepath);
+  std::vector<std::string> leftItems = {"Directory", std::filesystem::current_path().string()};
+  std::vector<std::string> rightItems = {"v0.0.1","nfile"};
 
   PageSystem::directoryFiles_t files = getDirectoryEntriesSorted(filepath);
 
   initscr();
+  use_env(TRUE);
+  refresh();
+  getmaxyx(stdscr, yMax, xMax);
 
   resizeterm(0, 0);
   /* vars for PageInfo
@@ -82,18 +78,17 @@ void displayDirectory(const std::string filepath) {
   int currentPage;
   */
   PageSystem::PageInfo Pages(10, 0);
-  Toolbar tb(stdscr, 2, 3, 0, leftItems, rightItems);
+  Toolbar stdscr_toolbar(stdscr, 2, 3, 0, leftItems, rightItems);
   PageSystem::directoryFiles_t currPageFiles = Pages.getPageItems(files);
   int count = 0;
-  int offset = 2;
+  int offset = 4;
 
   for (const auto &ent : currPageFiles) {
-    mvwprintw(stdscr, offset, 4, "%i. %s", count, ent.first.c_str());
-    offset += 2;
+    mvwprintw(stdscr, offset, 4, "%i. %s/", count, ent.first.c_str());
+    offset += 1;
     count += 1;
   }
 
-  getmaxyx(stdscr, yMax, xMax);
 
   std::vector<std::string> dirFiles;
 
@@ -104,7 +99,7 @@ void displayDirectory(const std::string filepath) {
 
   box(stdscr, 0, 0);
   refresh();
-  tb.printToolbar(yMax, xMax);
+  stdscr_toolbar.printToolbar(yMax, xMax);
 
   int ch;
   while ((ch = wgetch(stdscr)) != 'q' && ch != 'Q') {
