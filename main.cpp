@@ -39,7 +39,6 @@ public:
     }
     last_x = borderPadding;
 
-    wrefresh(win);
     for (const std::string item : leftItems) {
       mvwprintw(win, yOffset, last_x, " %s ", item.c_str());
       last_x += item.length() + xOffset;
@@ -47,10 +46,11 @@ public:
   }
 };
 
-PageSystem::directoryFiles_t getDirectoryEntriesSorted(std::string filepath) {
+PageSystem::directoryFiles_t getDirectoryEntriesSorted() {
+  std::string filepath = std::filesystem::current_path().string();
   PageSystem::directoryFiles_t dirFiles;
   for (const auto &entry : std::filesystem::directory_iterator(filepath)) {
-    if (std::filesystem::is_directory(entry))
+    if (std::filesystem::is_directory(entry) || entry.path().filename().string() == "..")
       dirFiles.push_back(
           std::make_pair(entry.path().filename().string(), entry));
   }
@@ -61,11 +61,13 @@ PageSystem::directoryFiles_t getDirectoryEntriesSorted(std::string filepath) {
 void displayDirectory(const std::string filepath) {
   int selectedOption = 0;
   int yMax, xMax;
+
   std::filesystem::current_path(filepath);
+  std::string curr = std::filesystem::current_path().string();
   std::vector<std::string> leftItems = {"Directory", std::filesystem::current_path().string()};
   std::vector<std::string> rightItems = {"v0.0.1","nfile"};
 
-  PageSystem::directoryFiles_t files = getDirectoryEntriesSorted(filepath);
+  PageSystem::directoryFiles_t files = getDirectoryEntriesSorted();
 
   initscr();
   use_env(TRUE);
@@ -81,7 +83,7 @@ void displayDirectory(const std::string filepath) {
   Toolbar stdscr_toolbar(stdscr, 2, 3, 0, leftItems, rightItems);
   PageSystem::directoryFiles_t currPageFiles = Pages.getPageItems(files);
   int count = 0;
-  int offset = 4;
+  int offset = 1;
 
   for (const auto &ent : currPageFiles) {
     mvwprintw(stdscr, offset, 4, "%i. %s/", count, ent.first.c_str());
