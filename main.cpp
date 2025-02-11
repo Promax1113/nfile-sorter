@@ -1,6 +1,7 @@
 #include "pageSystem/pageSystem.h"
 #include <algorithm>
 #include <cstdio>
+#include <cstdlib>
 #include <dirent.h>
 #include <filesystem>
 #include <iostream>
@@ -50,10 +51,9 @@ public:
 PageSystem::directoryFiles_t getDirectoryEntriesSorted() {
   std::string filepath = std::filesystem::current_path().string();
   PageSystem::directoryFiles_t dirFiles;
+  dirFiles.push_back(std::make_pair("..", std::filesystem::directory_entry(std::filesystem::path(".."))));
   for (const auto &entry : std::filesystem::directory_iterator(filepath)) {
-    if (std::filesystem::is_directory(entry) ||
-        entry.path().filename().string() == "..") {
-      wprintw(stdscr, "%s", entry.path().filename().c_str());
+    if (std::filesystem::is_directory(entry)){
       dirFiles.push_back(
           std::make_pair(entry.path().filename().string(), entry));
     }
@@ -65,11 +65,14 @@ PageSystem::directoryFiles_t getDirectoryEntriesSorted() {
 void displayDirectory(const std::string filepath) {
   int selectedOption = 0;
   int yMax, xMax;
-
+  clear();
   std::filesystem::current_path(filepath);
   std::string curr = std::filesystem::current_path().string();
-  std::vector<std::string> leftItems = {
-      "Directory", std::filesystem::current_path().string()};
+  int sz = curr.size();
+  if (curr.size() >= 60) {
+    curr = "..." + curr.substr(curr.size() - ((curr.size() - 3) / 2) - 10);
+  }
+  std::vector<std::string> leftItems = {"Directory", curr};
   std::vector<std::string> rightItems = {"v0.0.1", "nfile"};
 
   PageSystem::directoryFiles_t files = getDirectoryEntriesSorted();
@@ -84,23 +87,27 @@ void displayDirectory(const std::string filepath) {
   int itemsPerPage;
   int currentPage;
   */
-  PageSystem::PageInfo Pages(10, 0);
+  PageSystem::PageInfo Pages(20, 0);
   Toolbar stdscr_toolbar(stdscr, 2, 3, 0, leftItems, rightItems);
   PageSystem::directoryFiles_t currPageFiles = Pages.getPageItems(files);
   int currentItem = 0;
   int count = 0;
   int offset = 2;
 
-  for (const auto &ent : currPageFiles) {
-    mvwprintw(stdscr, offset, 4, "%i. %s/", count, ent.first.c_str());
-    offset += 1;
-    count += 1;
-  }
+  // for (const auto &ent : currPageFiles) {
+  //   mvwprintw(stdscr, offset, 4, "%i. %s/", count, ent.first.c_str());
+  //   offset += 1;
+  //   count += 1;
+  // }
 
   std::vector<std::string> dirFiles;
 
-  curs_set(0);
+  start_color();
+  init_pair(1, COLOR_BLACK, COLOR_WHITE);  // Highlighted text (black on white)
+  init_pair(2, COLOR_WHITE, COLOR_BLACK);
 
+  curs_set(0);
+  nodelay(stdscr, TRUE);
   keypad(stdscr, TRUE);
   noecho();
 
@@ -108,25 +115,66 @@ void displayDirectory(const std::string filepath) {
   refresh();
   stdscr_toolbar.printToolbar(yMax, xMax);
 
+
+
   int ch;
 
   while ((ch = wgetch(stdscr)) != 'q' && ch != 'Q') {
+      // ------
+      for (int _i = 0; _i < currPageFiles.size(); ++_i) {
+                  if (_i == currentItem) {
+                      // Apply the highlighted color pair
+                      attron(COLOR_PAIR(1));
+                  } else {
+                      // Apply the normal color pair
+                      attron(COLOR_PAIR(2));
+                  }
 
+                  mvwprintw(stdscr, offset + _i, 4, "%s/", currPageFiles.at(_i).first.c_str());
+
+                  // Turn off the attributes after drawing the line
+                  attroff(COLOR_PAIR(1));
+                  attroff(COLOR_PAIR(2));
+              }
+
+              // Refresh the screen to show the updated drawing
+              refresh();
+        // -----
     switch (ch) {
     case KEY_UP:
-      if (currentItem + 1 == currPageFiles.size())
-        currentItem -= 1;
-    case KEY_DOWN:
-      currentItem += 1;
-    case KEY_ENTER:
-      if (currPageFiles.at(currentItem).first == "..") {
-        displayDirectory(filepath + "/..");
+      if (currentItem - 1 >= 0){
+          currentItem -= 1;
+      } else {
+          if (Pages.currentPage >= 1){
+            Pages.currentPage -= 1;
+            currPageFiles = Pages.getPageItems(files);
+            currentItem = currPageFiles.size() - 1;
+          }
       }
+      break;
+    case KEY_DOWN:
+        if (currentItem + 1 != currPageFiles.size()){
+            currentItem += 1;
+        } else {
+            if (Pages.currentPage + 1 <= Pages.totalPages){
+                Pages.currentPage -= 1;
+                currPageFiles = Pages.getPageItems(files);
+                currentItem = 0;
+            }
+        }
+        break;
+    case 10:
+        displayDirectory("./" + currPageFiles.at(currentItem).first);
+      break;
     default:
-      continue;
+        refresh();
+      break;
+
     }
+
   }
   endwin();
+  exit(0);
 }
 
 int main(int argc, char *argv[]) {
@@ -134,8 +182,9 @@ int main(int argc, char *argv[]) {
 
   if (argc > 1) {
     filepath = argv[1];
-  } else {
-    std::cout << "No arg. defaulting to '.'\n";
   }
+  // } else {
+  //   std::cout << "No arg. defaulting to '.'\n";
+  // }
   displayDirectory(filepath);
 }
