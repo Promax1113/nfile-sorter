@@ -4,7 +4,7 @@
 #include <vector>
 namespace PageSystem {
 using directoryFiles_t =
-    std::vector<std::pair<std::string, std::filesystem::directory_entry>>;
+    std::vector<std::string>;
 class PageInfo {
 public:
   int totalPages;

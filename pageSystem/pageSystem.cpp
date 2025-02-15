@@ -7,10 +7,10 @@ PageInfo::PageInfo(int itemsPage, int curr) {
 }
 
 directoryFiles_t PageInfo::getPageItems(const directoryFiles_t &files) {
-  int start = currentPage * itemsPerPage;
-  totalPages = files.size() / itemsPerPage;
+  int start = this->currentPage * this->itemsPerPage;
+  this->totalPages = files.size() / itemsPerPage;
   if (files.size() % itemsPerPage != 0){
-      totalPages++;
+      this->totalPages++;
   }
   /*
   this uses min since if there's 25 items in list and start = 20, end will

@@ -4,12 +4,10 @@
 #include <cstdlib>
 #include <dirent.h>
 #include <filesystem>
-#include <iostream>
 #include <ncurses.h>
 #include <string>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <utility>
 #include <vector>
 
 class Toolbar {
@@ -51,11 +49,10 @@ public:
 PageSystem::directoryFiles_t getDirectoryEntriesSorted() {
   std::string filepath = std::filesystem::current_path().string();
   PageSystem::directoryFiles_t dirFiles;
-  dirFiles.push_back(std::make_pair("..", std::filesystem::directory_entry(std::filesystem::path(".."))));
+  dirFiles.push_back("..");
   for (const auto &entry : std::filesystem::directory_iterator(filepath)) {
-    if (std::filesystem::is_directory(entry)){
-      dirFiles.push_back(
-          std::make_pair(entry.path().filename().string(), entry));
+    if (std::filesystem::is_directory(entry)) {
+      dirFiles.push_back(entry.path().filename().string());
     }
   }
   sort(dirFiles.begin(), dirFiles.end());
@@ -65,6 +62,13 @@ PageSystem::directoryFiles_t getDirectoryEntriesSorted() {
 void displayDirectory(const std::string filepath) {
   int selectedOption = 0;
   int yMax, xMax;
+  getmaxyx(stdscr, yMax, xMax);
+
+  /* vars for PageInfo
+  int itemsPerPage;
+  int currentPage;
+  */
+  PageSystem::PageInfo Pages(yMax-3, 0);
   clear();
   std::filesystem::current_path(filepath);
   std::string curr = std::filesystem::current_path().string();
@@ -77,17 +81,10 @@ void displayDirectory(const std::string filepath) {
 
   PageSystem::directoryFiles_t files = getDirectoryEntriesSorted();
 
-  initscr();
-  use_env(TRUE);
   refresh();
-  getmaxyx(stdscr, yMax, xMax);
 
   resizeterm(0, 0);
-  /* vars for PageInfo
-  int itemsPerPage;
-  int currentPage;
-  */
-  PageSystem::PageInfo Pages(20, 0);
+
   Toolbar stdscr_toolbar(stdscr, 2, 3, 0, leftItems, rightItems);
   PageSystem::directoryFiles_t currPageFiles = Pages.getPageItems(files);
   int currentItem = 0;
@@ -99,11 +96,17 @@ void displayDirectory(const std::string filepath) {
   //   offset += 1;
   //   count += 1;
   // }
+  werase(stdscr);
 
+  // Redraw the border and toolbar
+  box(stdscr, 0, 0);
+  stdscr_toolbar.printToolbar(yMax, xMax);
+
+  // Now redraw the file list (see below)
+  refresh();
   std::vector<std::string> dirFiles;
 
-  start_color();
-  init_pair(1, COLOR_BLACK, COLOR_WHITE);  // Highlighted text (black on white)
+  init_pair(1, COLOR_BLACK, COLOR_WHITE); // Highlighted text (black on white)
   init_pair(2, COLOR_WHITE, COLOR_BLACK);
 
   curs_set(0);
@@ -111,70 +114,80 @@ void displayDirectory(const std::string filepath) {
   keypad(stdscr, TRUE);
   noecho();
 
-  box(stdscr, 0, 0);
-  refresh();
-  stdscr_toolbar.printToolbar(yMax, xMax);
-
-
-
   int ch;
 
   while ((ch = wgetch(stdscr)) != 'q' && ch != 'Q') {
-      // ------
-      for (int _i = 0; _i < currPageFiles.size(); ++_i) {
-                  if (_i == currentItem) {
-                      // Apply the highlighted color pair
-                      attron(COLOR_PAIR(1));
-                  } else {
-                      // Apply the normal color pair
-                      attron(COLOR_PAIR(2));
-                  }
 
-                  mvwprintw(stdscr, offset + _i, 4, "%s/", currPageFiles.at(_i).first.c_str());
+    std::string pageCount = "Page " + std::to_string(Pages.currentPage + 1) + " of " + std::to_string(Pages.totalPages);
+    // ------
+    for (int _i = 0; _i < currPageFiles.size(); ++_i) {
+      if (_i == currentItem) {
+        // Apply the highlighted color pair
+        attron(COLOR_PAIR(1));
+      } else {
+        // Apply the normal color pair
+        attron(COLOR_PAIR(2));
+      }
 
-                  // Turn off the attributes after drawing the line
-                  attroff(COLOR_PAIR(1));
-                  attroff(COLOR_PAIR(2));
-              }
+      mvwprintw(stdscr, offset + _i, 4, "%s/", currPageFiles.at(_i).c_str());
 
-              // Refresh the screen to show the updated drawing
-              refresh();
-        // -----
+      // Turn off the attributes after drawing the line
+      attroff(COLOR_PAIR(1));
+      attroff(COLOR_PAIR(2));
+    }
+
+    // Refresh the screen to show the updated drawing
+    refresh();
+    // -----
+    mvwprintw(stdscr, yMax-1, xMax-pageCount.size()-2, "%s", pageCount.c_str());
+
     switch (ch) {
     case KEY_UP:
-      if (currentItem - 1 >= 0){
-          currentItem -= 1;
+      if (currentItem > 0) {
+        currentItem--;
       } else {
-          if (Pages.currentPage >= 1){
-            Pages.currentPage -= 1;
-            currPageFiles = Pages.getPageItems(files);
-            currentItem = currPageFiles.size() - 1;
-          }
+        if (Pages.currentPage > 0) {
+          Pages.currentPage--;
+          currPageFiles = Pages.getPageItems(files);
+          currentItem = currPageFiles.size() - 1;
+          clear();
+          box(stdscr, 0, 0);
+          stdscr_toolbar.printToolbar(yMax, xMax);
+        }
       }
       break;
     case KEY_DOWN:
-        if (currentItem + 1 != currPageFiles.size()){
-            currentItem += 1;
-        } else {
-            if (Pages.currentPage + 1 <= Pages.totalPages){
-                Pages.currentPage -= 1;
-                currPageFiles = Pages.getPageItems(files);
-                currentItem = 0;
-            }
+      if (currentItem < currPageFiles.size() - 1) {
+        currentItem++;
+      } else {
+        if (Pages.currentPage + 1 < Pages.totalPages) {
+          Pages.currentPage++;
+          currPageFiles = Pages.getPageItems(files);
+          currentItem = 0;
+          clear();
+          box(stdscr, 0, 0);
+          stdscr_toolbar.printToolbar(yMax, xMax);
         }
-        break;
+      }
+      break;
     case 10:
-        displayDirectory("./" + currPageFiles.at(currentItem).first);
+      displayDirectory("./" + currPageFiles.at(currentItem));
       break;
     default:
-        refresh();
+      refresh();
       break;
-
     }
-
   }
   endwin();
+  curs_set(1);
+  keypad(stdscr, FALSE);
+  echo();
+  nodelay(stdscr, FALSE);
+  clear();
+  refresh();
   exit(0);
+
+  return;
 }
 
 int main(int argc, char *argv[]) {
@@ -186,5 +199,11 @@ int main(int argc, char *argv[]) {
   // } else {
   //   std::cout << "No arg. defaulting to '.'\n";
   // }
+  initscr();
+  use_env(TRUE);
+  start_color();
+  keypad(stdscr, TRUE);
+  noecho();
   displayDirectory(filepath);
+
 }
