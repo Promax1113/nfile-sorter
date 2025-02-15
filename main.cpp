@@ -118,7 +118,7 @@ void displayDirectory(const std::string filepath) {
 
   while ((ch = wgetch(stdscr)) != 'q' && ch != 'Q') {
 
-    std::string pageCount = "Page " + std::to_string(Pages.currentPage + 1) + " of " + std::to_string(Pages.totalPages);
+    std::string pageCount = " Page " + std::to_string(Pages.currentPage + 1) + " of " + std::to_string(Pages.totalPages) + " ";
     // ------
     for (int _i = 0; _i < currPageFiles.size(); ++_i) {
       if (_i == currentItem) {
