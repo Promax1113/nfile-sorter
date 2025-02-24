@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <dirent.h>
 #include <filesystem>
+#include <iostream>
 #include <ncurses.h>
 #include <string>
 #include <sys/stat.h>
@@ -61,8 +62,14 @@ PageSystem::directoryFiles_t getDirectoryEntriesSorted() {
 
 void displayDirectory(const std::string filepath) {
   int selectedOption = 0;
+  wrefresh(stdscr);
   int yMax, xMax;
   getmaxyx(stdscr, yMax, xMax);
+  if (yMax < 24 || xMax < 80){
+      endwin();
+      std::cout << "Your terminal size, (" << xMax << " x " << yMax << ") is smaller than the minimum of (80 x 24).\n\r";
+      return;
+  }
 
   /* vars for PageInfo
   int itemsPerPage;
@@ -73,11 +80,11 @@ void displayDirectory(const std::string filepath) {
   std::filesystem::current_path(filepath);
   std::string curr = std::filesystem::current_path().string();
   int sz = curr.size();
-  if (curr.size() >= 60) {
+  if (curr.size() >= (xMax/1.5)+10) {
     curr = "..." + curr.substr(curr.size() - ((curr.size() - 3) / 2) - 10);
   }
   std::vector<std::string> leftItems = {"Directory", curr};
-  std::vector<std::string> rightItems = {"v0.0.1", "nfile"};
+  std::vector<std::string> rightItems = {"v0.1", "nfile"};
 
   PageSystem::directoryFiles_t files = getDirectoryEntriesSorted();
 
